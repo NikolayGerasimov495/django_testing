@@ -1,13 +1,11 @@
 from http import HTTPStatus
 
+import pytest
+from pytest_django.asserts import assertRedirects
 from django.urls import reverse
 
-import pytest
-
-from pytest_django.asserts import assertRedirects
-
-from .conftest import TEXT_COMMENT
 from news.models import Comment
+from .conftest import TEXT_COMMENT
 
 
 @pytest.mark.django_db

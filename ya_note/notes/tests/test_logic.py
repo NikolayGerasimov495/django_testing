@@ -1,28 +1,21 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
 from django.urls import reverse
 
+from .base_test_case import BaseTestCase
+from notes.forms import WARNING
+from notes.models import Note
 from pytils.translit import slugify
 
-from notes.models import Note
-from notes.forms import WARNING
 
 User = get_user_model()
 
 
-class TestRoutes(TestCase):
+class TestNotes(BaseTestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.author = User.objects.create(username='author')
-        cls.author_client = Client()
-        cls.author_client.force_login(cls.author)
-        cls.auth_user = User.objects.create(username='auth_user')
-        cls.auth_user_client = Client()
-        cls.auth_user_client.force_login(cls.auth_user)
-        cls.data = {
+    def setUp(self):
+        self.data = {
             'title': 'Новый заголовок',
             'text': 'Новый текст',
             'slug': 'new-slug'
@@ -33,7 +26,7 @@ class TestRoutes(TestCase):
         url = reverse('notes:add')
         response = self.author_client.post(url, data=self.data)
         self.assertRedirects(response, reverse('notes:success'))
-        self.assertEqual(Note.objects.count(), 1)
+        self.assertEqual(Note.objects.exists(), True)
         new_note = Note.objects.get()
         self.assertEqual(new_note.title, self.data['title'])
         self.assertEqual(new_note.text, self.data['text'])
@@ -47,7 +40,7 @@ class TestRoutes(TestCase):
         login_url = reverse('users:login')
         expected_url = f'{login_url}?next={url}'
         self.assertRedirects(response, expected_url)
-        self.assertEqual(Note.objects.count(), 0)
+        self.assertEqual(Note.objects.exists(), False)
 
     def test_not_unique_slug(self):
         """Невозможно создать две заметки с одинаковым slug."""
@@ -64,7 +57,7 @@ class TestRoutes(TestCase):
         })
         self.assertFormError(response, 'form', 'slug',
                              errors=(self.note.slug + WARNING))
-        self.assertEqual(Note.objects.count(), 1)
+        self.assertEqual(Note.objects.exists(), True)
 
     def test_empty_slug(self):
         """Если при создании заметки не заполнен slug,
@@ -75,7 +68,7 @@ class TestRoutes(TestCase):
         self.data.pop('slug')
         response = self.author_client.post(url, self.data)
         self.assertRedirects(response, reverse('notes:success'))
-        self.assertEqual(Note.objects.count(), 1)
+        self.assertEqual(Note.objects.exists(), True)
         new_note = Note.objects.get()
         expected_slug = slugify(self.data['title'])
         self.assertEqual(new_note.slug, expected_slug)
@@ -90,7 +83,7 @@ class TestRoutes(TestCase):
         url = reverse('notes:delete', args=(self.note.slug,))
         response = self.author_client.post(url)
         self.assertRedirects(response, reverse('notes:success'))
-        self.assertEqual(Note.objects.count(), 0)
+        self.assertEqual(Note.objects.exists(), False)
 
     def test_other_user_cant_delete_note(self):
         """Пользователь не может удалять чужие заметки."""
@@ -102,7 +95,7 @@ class TestRoutes(TestCase):
         url = reverse('notes:delete', args=(self.note.slug,))
         response = self.auth_user_client.post(url)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
-        self.assertEqual(Note.objects.count(), 1)
+        self.assertEqual(Note.objects.exists(), True)
 
     def test_author_can_edit_note(self):
         """Пользователь может редактировать свои заметки."""

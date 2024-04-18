@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from django.conf import settings
 from django.utils import timezone
@@ -30,38 +30,37 @@ def author_client(author, client):
 @pytest.fixture
 def news():
     """Фикстура для создания новости."""
-    news = News.objects.create(
+    return News.objects.create(
         title=HEADING,
         text=TEXT_NEWS,
         date=datetime.today(),
     )
-    return news
 
 
 @pytest.fixture
 def comment(news, author):
     """Фикстура для создания коммента."""
-    comment = Comment.objects.create(
+    return Comment.objects.create(
         text=TEXT_COMMENT,
         news=news,
         author=author
     )
-    return comment
 
 
 @pytest.fixture
 def list_comments(news, author):
     """Фикстура для создания списка комментариев."""
-    now, list_comment = timezone.now(), []
+    now = timezone.now()
+    list_comment = []
     for index in range(2):
         comment = Comment.objects.create(
-            text='Текст {index}',
+            text=f'Текст {index}',
             news=news,
             author=author,
+            created=now + timezone.timedelta(days=index)
         )
-        comment.created = now + timedelta(days=index)
-        comment.save()
         list_comment.append(comment)
+    return list_comment
 
 
 @pytest.fixture
@@ -73,13 +72,14 @@ def new_text_comment():
 @pytest.fixture
 def list_news():
     """Фикстура для создания списка новостей."""
-    today, list_news = datetime.today(), []
+    today = timezone.now()
+    list_news = []
     for index in range(settings.NEWS_COUNT_ON_HOME_PAGE):
         news = News.objects.create(
-            title='Новость {index}',
+            title=f'Новость {index}',
             text=TEXT_NEWS,
         )
-        news.date = today - timedelta(days=index)
+        news.date = today - timezone.timedelta(days=index)
         news.save()
         list_news.append(news)
     return list_news

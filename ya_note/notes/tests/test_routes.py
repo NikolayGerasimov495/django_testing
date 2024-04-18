@@ -1,42 +1,49 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
 from django.urls import reverse
 
+from .base_test_case import BaseTestCase
 from notes.models import Note
 
 User = get_user_model()
 
 
-class TestRoutes(TestCase):
+class TestRoutesPageAvailability(BaseTestCase):
+
+    home_urls = (
+        'notes:home',
+        'users:login',
+        'users:logout',
+        'users:signup',
+    )
+
+    auth_user_urls = (
+        'notes:list',
+        'notes:success',
+        'notes:add',
+    )
+
+    detail_urls = (
+        'notes:detail',
+        'notes:edit',
+        'notes:delete',
+    )
 
     @classmethod
     def setUpTestData(cls):
-        cls.author = User.objects.create(username='author')
-        cls.author_client = Client()
-        cls.author_client.force_login(cls.author)
-        cls.auth_user = User.objects.create(username='auth_user')
-        cls.auth_user_client = Client()
-        cls.auth_user_client.force_login(cls.auth_user)
+        super().setUpTestData()
         cls.note = Note.objects.create(
             title='Заголовок',
             text='Текст',
-            author=cls.author
+            author=cls.author,
         )
 
     def test_home_availability_for_anonymous_user(self):
         """Для доступа всем пользователям к страницам:
         главная, регистирация, вход/выход в учетку
         """
-        urls = (
-            'notes:home',
-            'users:login',
-            'users:logout',
-            'users:signup',
-        )
-
-        for name in urls:
+        for name in self.home_urls:
             with self.subTest(name=name):
                 url = reverse(name)
                 response = self.client.get(url)
@@ -46,12 +53,7 @@ class TestRoutes(TestCase):
         """Аутентифицированному пользователю доступны
         страницы notes/, done/, add/.
         """
-        urls = (
-            'notes:list',
-            'notes:success',
-            'notes:add',
-        )
-        for name in urls:
+        for name in self.auth_user_urls:
             with self.subTest(name=name):
                 url = reverse(name)
                 response = self.author_client.get(url)
@@ -65,13 +67,8 @@ class TestRoutes(TestCase):
             (self.author_client, HTTPStatus.OK),
             (self.auth_user_client, HTTPStatus.NOT_FOUND),
         )
-        urls = (
-            'notes:detail',
-            'notes:edit',
-            'notes:delete',
-        )
         for user, status in users_statuses:
-            for name in urls:
+            for name in self.detail_urls:
                 with self.subTest(user=user, name=name):
                     url = reverse(name, args=(self.note.slug,))
                     response = user.get(url)

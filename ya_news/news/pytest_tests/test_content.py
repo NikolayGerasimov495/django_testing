@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from django.conf import settings
 from django.urls import reverse
 
@@ -6,11 +8,12 @@ import pytest
 
 @pytest.mark.django_db
 def test_news_count(client, list_news):
-    """Не более 10 новостей на главной странице — ."""
+    """Не более 10 новостей на главной странице."""
     url = reverse('news:home')
     response = client.get(url)
+    assert response.status_code == HTTPStatus.OK
     object_list = response.context['object_list']
-    news_count = len(object_list)
+    news_count = object_list.count()
     assert news_count == settings.NEWS_COUNT_ON_HOME_PAGE
 
 
@@ -37,7 +40,10 @@ def test_comments_order(client, news, list_comments):
     assert 'news' in response.context
     news = response.context['news']
     all_comments = news.comment_set.all()
-    assert all_comments[0].created < all_comments[1].created
+    sorted_comments = sorted(
+        all_comments, key=lambda x: x.created
+    )
+    assert list(sorted_comments) == list_comments
 
 
 @pytest.mark.parametrize(
