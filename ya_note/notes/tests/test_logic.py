@@ -2,12 +2,11 @@ from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from pytils.translit import slugify
 
 from .base_test_case import BaseTestCase
 from notes.forms import WARNING
 from notes.models import Note
-from pytils.translit import slugify
-
 
 User = get_user_model()
 
@@ -24,9 +23,10 @@ class TestNotes(BaseTestCase):
     def test_user_can_create_note(self):
         """Залогиненный пользователь может создать заметку."""
         url = reverse('notes:add')
+        initial_notes_count = Note.objects.count()
         response = self.author_client.post(url, data=self.data)
         self.assertRedirects(response, reverse('notes:success'))
-        self.assertEqual(Note.objects.exists(), True)
+        self.assertEqual(Note.objects.count(), initial_notes_count + 1)
         new_note = Note.objects.get()
         self.assertEqual(new_note.title, self.data['title'])
         self.assertEqual(new_note.text, self.data['text'])
@@ -36,11 +36,12 @@ class TestNotes(BaseTestCase):
     def test_anonymous_user_cant_create_note(self):
         """Анонимный пользователь не может создать заметку."""
         url = reverse('notes:add')
+        initial_notes_count = Note.objects.count()
         response = self.client.post(url, self.data)
         login_url = reverse('users:login')
         expected_url = f'{login_url}?next={url}'
         self.assertRedirects(response, expected_url)
-        self.assertEqual(Note.objects.exists(), False)
+        self.assertEqual(Note.objects.count(), initial_notes_count)
 
     def test_not_unique_slug(self):
         """Невозможно создать две заметки с одинаковым slug."""
@@ -50,6 +51,7 @@ class TestNotes(BaseTestCase):
             author=self.author,
         )
         url = reverse('notes:add')
+        initial_notes_count = Note.objects.count()
         response = self.author_client.post(url, data={
             'title': 'Новый заголовок',
             'text': 'Новый текст',
@@ -57,7 +59,7 @@ class TestNotes(BaseTestCase):
         })
         self.assertFormError(response, 'form', 'slug',
                              errors=(self.note.slug + WARNING))
-        self.assertEqual(Note.objects.exists(), True)
+        self.assertEqual(Note.objects.count(), initial_notes_count)
 
     def test_empty_slug(self):
         """Если при создании заметки не заполнен slug,
@@ -65,10 +67,11 @@ class TestNotes(BaseTestCase):
         pytils.translit.slugify.
         """
         url = reverse('notes:add')
+        initial_notes_count = Note.objects.count()
         self.data.pop('slug')
         response = self.author_client.post(url, self.data)
         self.assertRedirects(response, reverse('notes:success'))
-        self.assertEqual(Note.objects.exists(), True)
+        self.assertEqual(Note.objects.count(), initial_notes_count + 1)
         new_note = Note.objects.get()
         expected_slug = slugify(self.data['title'])
         self.assertEqual(new_note.slug, expected_slug)
@@ -81,9 +84,10 @@ class TestNotes(BaseTestCase):
             author=self.author,
         )
         url = reverse('notes:delete', args=(self.note.slug,))
+        initial_notes_count = Note.objects.count()
         response = self.author_client.post(url)
         self.assertRedirects(response, reverse('notes:success'))
-        self.assertEqual(Note.objects.exists(), False)
+        self.assertEqual(Note.objects.count(), initial_notes_count - 1)
 
     def test_other_user_cant_delete_note(self):
         """Пользователь не может удалять чужие заметки."""
@@ -93,9 +97,10 @@ class TestNotes(BaseTestCase):
             author=self.author,
         )
         url = reverse('notes:delete', args=(self.note.slug,))
+        initial_notes_count = Note.objects.count()
         response = self.auth_user_client.post(url)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
-        self.assertEqual(Note.objects.exists(), True)
+        self.assertEqual(Note.objects.count(), initial_notes_count)
 
     def test_author_can_edit_note(self):
         """Пользователь может редактировать свои заметки."""

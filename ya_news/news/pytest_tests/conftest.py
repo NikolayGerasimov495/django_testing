@@ -1,9 +1,8 @@
 from datetime import datetime
 
+import pytest
 from django.conf import settings
 from django.utils import timezone
-
-import pytest
 
 from news.models import News, Comment
 
@@ -61,12 +60,6 @@ def list_comments(news, author):
         )
         list_comment.append(comment)
     return list_comment
-
-
-@pytest.fixture
-def new_text_comment():
-    """Фикстура для создания нового текста для комментария."""
-    return {'text': NEW_TEXT}
 
 
 @pytest.fixture

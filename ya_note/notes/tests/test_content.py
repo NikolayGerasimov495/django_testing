@@ -2,13 +2,13 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from .base_test_case import BaseTestCase
-from notes.models import Note
 from notes.forms import NoteForm
+from notes.models import Note
 
 User = get_user_model()
 
 
-class TestNotesRout(BaseTestCase):
+class TestNotesRoute(BaseTestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()

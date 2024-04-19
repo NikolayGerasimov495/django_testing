@@ -76,22 +76,16 @@ class TestRoutesPageAvailability(BaseTestCase):
 
     def test_redirects(self):
         """Перенаправление анонимного пользователя на страницу логина
-        при попытках зайти: на страницу списка заметок, страницу успешного
-        добавления записи, страницу добавления заметки, отдельной заметки,
-        редактирования или удаления заметки
+        при попытках зайти на различные страницы.
         """
         login_url = reverse('users:login')
-        urls = (
-            ('notes:list', None),
-            ('notes:success', None),
-            ('notes:add', None),
-            ('notes:detail', (self.note.slug,)),
-            ('notes:edit', (self.note.slug,)),
-            ('notes:delete', (self.note.slug,)),
-        )
-        for name, args in urls:
-            with self.subTest():
-                url = reverse(name, args=args)
+
+        urls_to_test = self.auth_user_urls + self.detail_urls
+        for name in urls_to_test:
+            with self.subTest(name=name):
+                url = reverse(name,
+                              args=(self.note.slug,)
+                              ) if name in self.detail_urls else reverse(name)
                 redirect_url = f'{login_url}?next={url}'
                 response = self.client.get(url)
                 self.assertRedirects(response, redirect_url)
